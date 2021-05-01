@@ -9,4 +9,3 @@ edition = "2018"
 [dependencies]
 #matrix = { path = "../matrix"}
 matrix = { git = "https://github.com/poloskovi/matrix"}
-# num_traits = "0.2.14"
