@@ -6,6 +6,7 @@ mod qubit;
 use qubit::Qubit;
 
 extern crate matrix;
+use matrix::Matrix;
 
 fn print_correct(qb: Qubit<f64>){
     if qb.is_correct(){
@@ -82,16 +83,43 @@ fn exercise_2_10(){
 // Какова вероятность при измерении второго кубита в стандартном базисе, получить вектор |0> ?
 fn exercise_2_11(){
 
-//    println!("");
-//    println!("Упражнение 2.11");
+    println!("");
+    println!("Упражнение 2.11");
 
-//    // Решение:
-//    // 1. Переводим исходное состояние в базис Адамара
+    let sqrt3 = 3_f64.sqrt();
+    let c1:Complex<f64> = Complex::new(1.0/4.0, sqrt3/4.0);
+    let c2:Complex<f64> = Complex::new(1.0/4.0, -sqrt3/4.0);
 
-//    let sqrt3 = 3_f64.sqrt();
-//    let c1:Complex<f64> = Complex::new(1.0/4.0, sqrt3/4.0);
-//    let c1:Complex<f64> = Complex::new(1.0/4.0, -sqrt3/4.0);
-//    let q1 = Qubit::new(c1, c2);
+    let mut state = Matrix::new(4,1);
+    state.set(0,0,c1);
+    state.set(0,1,c2);
+    state.set(0,2,c2);
+    state.set(0,3,c1);
+
+    println!("Исходное состояние:");
+    println!("{}", state);
+
+    //к первому кубиту применяем оператор Адамара, ко второму - единичный оператор
+    let operator = Matrix::kroneker_product(
+        &qubit::matrix_hadamar(),
+        &qubit::ed_matrix()
+    );
+    println!("Оператор H⊗I:");
+    println!("{}",operator);
+    let state_2 = Matrix::mul(&operator, &state);
+    println!("Cостояние системы после воздействия оператором H⊗I:");
+    println!("{}", state_2);
+
+    // Измерение показало, что первый вектор находится в состоянии |->. Следовательно, в состоянии
+    // а |+0> + б |+1> + г |-0> + д |-1> реализованы два последних слагаемых г |-0> + д |-1>:
+    let mut q2 = Qubit::new(
+        state_2.get(2,0),
+        state_2.get(3,0)
+    );
+    println!("вектор 2: {}", q2);
+    q2.normalize();
+    println!("после нормализации : {}", q2);
+    println!("вероятность нахождения в состоянии '0': {:.4}", q2.probability(0));
 
 }
 
@@ -100,5 +128,6 @@ fn main() {
     exercise_2_6();
     exercise_2_7();
     exercise_2_10();
+    exercise_2_11();
 
 }

@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 #matrix = { path = "../matrix"}
-matrix = { git = "https://github.com/poloskovi/matrix"}
+matrix = { git = "https://github.com/poloskovi/matrix", version = ">=0.1.1"}

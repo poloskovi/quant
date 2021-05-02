@@ -13,6 +13,7 @@ pub trait Floating<T>{
     fn sqrt_2()->T;
     //некое маленькое число, используется как граница погрешности в определении корректности кубита
     fn epsilon()->T;
+    fn sqrt(self)->T;
 }
 impl Floating<f64> for f64{
     fn sqrt_2() -> f64{
@@ -21,6 +22,9 @@ impl Floating<f64> for f64{
     fn epsilon() -> f64{
         0.001
     }
+    fn sqrt(self) -> f64{
+        self.sqrt()
+    }
 }
 impl Floating<f32> for f32{
     fn sqrt_2() -> f32{
@@ -28,6 +32,9 @@ impl Floating<f32> for f32{
     }
     fn epsilon() -> f32{
         0.001
+    }
+    fn sqrt(self) -> f32{
+        self.sqrt()
     }
 }
 
@@ -45,7 +52,15 @@ impl<T> Qubit<T>{
             beta,
         }
     }
-    // вероятность нахождения в состоянии в заданном состоянии (0 или 1)
+    // нормализация, то есть приведение к вектору единичной длины
+    pub fn normalize(&mut self)
+    where T: Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Default + Copy + Floating<T>{
+        let full_probability = (self.probability(0) + self.probability(1)).sqrt();
+        let c = Complex{re:full_probability, im:T::default()};
+        self.alfa = self.alfa / c;
+        self.beta = self.beta / c;
+    }
+    // вероятность нахождения в заданном состоянии (0 или 1)
     pub fn probability(self, state:u8) -> T
     where T: Add<Output=T> + Mul<Output=T> + Copy{
         if state == 0{
@@ -137,6 +152,21 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
     matrix_hadamar.set(1,1,Complex::zero() - one_by_sqrt_2);
 
     matrix_hadamar
+
+}
+
+// Единичная матрица 2х2
+pub fn ed_matrix<T>() -> Matrix<Complex<T>>
+where T: Default + Copy + One<T>{
+
+    let mut ed_matrix = Matrix::new(2,2);
+
+    ed_matrix.set(0,0,Complex::<T>::one());
+    ed_matrix.set(0,1,Complex::<T>::zero());
+    ed_matrix.set(1,0,Complex::<T>::zero());
+    ed_matrix.set(1,1,Complex::<T>::one());
+
+    ed_matrix
 
 }
 
