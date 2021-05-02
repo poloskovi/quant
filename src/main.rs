@@ -140,12 +140,12 @@ fn algorithm_deutsch(){
         &qx.as_matrix(),
         &qy.as_matrix()
     );
-    println!("Начальное состояние:");
-    println!("{}", state);
 
     for variant in 0..4{
 
+        println!("");
         println!("вариант Оракула: {}", variant);
+
         //к обоим кубитам применяем оператор Адамара
         let operator = Matrix::kroneker_product(
             &qubit::matrix_hadamar(),
@@ -154,7 +154,7 @@ fn algorithm_deutsch(){
 
         let state_2 = Matrix::mul(&operator, &state);
 
-        // состояние после воздействия неизвестного оператора
+        // к обоим кубитам применяем неизвестный оператор
         let unknown_operator = unknown_operator(variant);
         let state_3 = Matrix::mul(&unknown_operator, &state_2);
 
@@ -164,9 +164,20 @@ fn algorithm_deutsch(){
             &qubit::ed_matrix()
         );
         let state_4 = Matrix::mul(&operator_hadamar_ed, &state_3);
-        println!("Cостояние системы в конце:");
-        println!("{}", state_4);
 
+        // измерение кубита x:
+
+        // вероятность того, что оракул - константа
+        let probability_const = state_4.get(0,0).sqrm() + state_4.get(1,0).sqrm();
+
+        // вероятность того, что оракул - сбалансирован
+        let probability_balans = state_4.get(2,0).sqrm() + state_4.get(3,0).sqrm();
+
+        if probability_const>probability_balans{
+            println!("Оракул - константа с вероятностью {:.2}%", probability_const*100.0);
+        }else{
+            println!("Оракул - сбалансирован с вероятностью {:.2}%", probability_balans*100.0);
+        }
     }
 
 }

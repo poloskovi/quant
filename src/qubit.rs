@@ -95,18 +95,6 @@ impl<T> Qubit<T>{
     where T: Copy{
         Self::new(m.get(0,0), m.get(0,1))
     }
-    // здесь сделано неправильно. Нужно делать тензорное произведение. Пока такая функция не требуется
-//    // преобразовать вектор кубитов в матрицу
-//    pub fn vector_to_matrix(vector: &Vec<Qubit<T>>) -> Matrix<Complex<T>>
-//    where T: Default + Copy + Clone{
-//        let nrow = 2*vector.len();
-//        let mut matrix = Matrix::new(nrow,1);
-//        for (i, value) in vector.iter().enumerate() {
-//            matrix.set(i*2, 0, value.alfa);
-//            matrix.set(i*2+1, 0, value.beta);
-//        }
-//        matrix
-//    }
 }
 
 impl<T> fmt::Display for Qubit<T>
