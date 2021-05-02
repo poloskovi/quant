@@ -106,6 +106,7 @@ fn exercise_2_11(){
     );
     println!("Оператор H⊗I:");
     println!("{}",operator);
+
     let state_2 = Matrix::mul(&operator, &state);
     println!("Cостояние системы после воздействия оператором H⊗I:");
     println!("{}", state_2);
@@ -123,11 +124,92 @@ fn exercise_2_11(){
 
 }
 
+// Задача Дойча
+// Задача Дойча — Йожи заключается в определении, является ли функция нескольких двоичных переменных
+// f ( x 1 , x 2 , … , x n ) постоянной (принимает либо значение 0, либо 1 при любых аргументах)
+// или сбалансированной (для половины области определения принимает значение 0, для другой половины 1)
+fn algorithm_deutsch(){
+
+    println!("");
+    println!("Задача Дойча");
+
+    let qx = Qubit::<f64>::new(Complex::one(), Complex::zero());
+    let qy = Qubit::<f64>::new(Complex::zero(), Complex::one());
+
+    let state = Matrix::kroneker_product(
+        &qx.as_matrix(),
+        &qy.as_matrix()
+    );
+    println!("Начальное состояние:");
+    println!("{}", state);
+
+    for variant in 0..4{
+
+        println!("вариант Оракула: {}", variant);
+        //к обоим кубитам применяем оператор Адамара
+        let operator = Matrix::kroneker_product(
+            &qubit::matrix_hadamar(),
+            &qubit::matrix_hadamar()
+        );
+
+        let state_2 = Matrix::mul(&operator, &state);
+
+        // состояние после воздействия неизвестного оператора
+        let unknown_operator = unknown_operator(variant);
+        let state_3 = Matrix::mul(&unknown_operator, &state_2);
+
+        // к кубиту x применяем оператор Адамара
+        let operator_hadamar_ed = Matrix::kroneker_product(
+            &qubit::matrix_hadamar(),
+            &qubit::ed_matrix()
+        );
+        let state_4 = Matrix::mul(&operator_hadamar_ed, &state_3);
+        println!("Cостояние системы в конце:");
+        println!("{}", state_4);
+
+    }
+
+}
+
+fn unknown_operator(variant: u8) -> Matrix<Complex<f64>>{
+    match variant{
+        // константа f(x) = 0
+        0 => Matrix::kroneker_product(
+                &qubit::ed_matrix(),
+                &qubit::ed_matrix()
+            ),
+        // константа f(x) = 1
+        1 => Matrix::kroneker_product(
+                &qubit::ed_matrix(),
+                &qubit::matrix_X()
+            ),
+        // сбалансирована f(x) = x
+        2 => qubit::matrix_CNOT(),
+        // сбалансирована f(x) = -x
+        3 => Matrix::mul(
+                &Matrix::mul(
+                    &Matrix::kroneker_product(
+                        &qubit::matrix_X(),
+                        &qubit::ed_matrix()
+                    ),
+                    &qubit::matrix_CNOT()
+                ),
+                &Matrix::kroneker_product(
+                    &qubit::matrix_X(),
+                    &qubit::ed_matrix()
+                )
+            ),
+        _=> panic!("")
+    }
+}
+
 fn main() {
 
     exercise_2_6();
     exercise_2_7();
     exercise_2_10();
     exercise_2_11();
+
+    algorithm_deutsch();
 
 }

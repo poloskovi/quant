@@ -95,12 +95,24 @@ impl<T> Qubit<T>{
     where T: Copy{
         Self::new(m.get(0,0), m.get(0,1))
     }
+    // здесь сделано неправильно. Нужно делать тензорное произведение. Пока такая функция не требуется
+//    // преобразовать вектор кубитов в матрицу
+//    pub fn vector_to_matrix(vector: &Vec<Qubit<T>>) -> Matrix<Complex<T>>
+//    where T: Default + Copy + Clone{
+//        let nrow = 2*vector.len();
+//        let mut matrix = Matrix::new(nrow,1);
+//        for (i, value) in vector.iter().enumerate() {
+//            matrix.set(i*2, 0, value.alfa);
+//            matrix.set(i*2+1, 0, value.beta);
+//        }
+//        matrix
+//    }
 }
 
 impl<T> fmt::Display for Qubit<T>
 where T: Default + PartialEq + PartialOrd + Display + Sub<Output=T> + Copy + One<T>{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}|0> + {}|1>", self.alfa, self.beta)
+        write!(f, "({}) |0> + ({}) |1>", self.alfa, self.beta)
     }
 }
 
@@ -117,20 +129,11 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 }
 
 // Гейт X (оператор квантового NOT)
-pub fn q_not<T>(q: Qubit<T>) -> Qubit<T>
+pub fn X<T>(q: Qubit<T>) -> Qubit<T>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>{
 
-    let mut q_not = Matrix::new(2,2);
-
-    let one = Complex::one();
-    let zero = Complex::zero();
-
-    q_not.set(0,0,zero);
-    q_not.set(0,1,one);
-    q_not.set(1,0,one);
-    q_not.set(1,1,zero);
-
-    let m = Matrix::mul(&q_not, &q.as_matrix());
+    let matrix_X = matrix_X();
+    let m = Matrix::mul(&matrix_X, &q.as_matrix());
     Qubit::from_matrix(m)
 
 }
@@ -139,19 +142,70 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 pub fn matrix_hadamar<T>() -> Matrix<Complex<T>>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>+Floating<T>{
 
-    let mut matrix_hadamar = Matrix::new(2,2);
+    let mut matrix = Matrix::new(2,2);
 
     let one_by_sqrt_2 = Complex{
         re: T::one() / T::sqrt_2(),
         im: T::default(),
     };
 
-    matrix_hadamar.set(0,0,one_by_sqrt_2);
-    matrix_hadamar.set(0,1,one_by_sqrt_2);
-    matrix_hadamar.set(1,0,one_by_sqrt_2);
-    matrix_hadamar.set(1,1,Complex::zero() - one_by_sqrt_2);
+    matrix.set(0,0,one_by_sqrt_2);
+    matrix.set(0,1,one_by_sqrt_2);
+    matrix.set(1,0,one_by_sqrt_2);
+    matrix.set(1,1,Complex::zero() - one_by_sqrt_2);
 
-    matrix_hadamar
+    matrix
+
+}
+
+// Матрица гейта X (квантовый NOT)
+pub fn matrix_X<T>() -> Matrix<Complex<T>>
+where T: Default + Copy + One<T>{
+
+    let mut matrix = Matrix::new(2,2);
+
+    let one = Complex::one();
+    let zero = Complex::zero();
+
+    matrix.set(0,0,zero);
+    matrix.set(0,1,one);
+    matrix.set(1,0,one);
+    matrix.set(1,1,zero);
+
+    matrix
+
+}
+
+// Матрица гейта CNOT
+pub fn matrix_CNOT<T>() -> Matrix<Complex<T>>
+where T: Default + Copy + One<T>+Floating<T>{
+
+    let mut matrix = Matrix::new(4,4);
+
+    let one = Complex::one();
+    let zero = Complex::zero();
+
+    matrix.set(0,0,one);
+    matrix.set(0,1,zero);
+    matrix.set(0,2,zero);
+    matrix.set(0,3,zero);
+
+    matrix.set(1,0,zero);
+    matrix.set(1,1,one);
+    matrix.set(1,2,zero);
+    matrix.set(1,3,zero);
+
+    matrix.set(2,0,zero);
+    matrix.set(2,1,zero);
+    matrix.set(2,2,zero);
+    matrix.set(2,3,one);
+
+    matrix.set(3,0,zero);
+    matrix.set(3,1,zero);
+    matrix.set(3,2,one);
+    matrix.set(3,3,zero);
+
+    matrix
 
 }
 
