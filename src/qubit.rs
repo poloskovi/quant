@@ -95,19 +95,8 @@ where T: Default + PartialEq + PartialOrd + Display + Sub<Output=T> + Copy + One
 pub fn hadamar<T>(q: Qubit<T>) -> Qubit<T>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>+Floating<T>{
 
-    let mut hadamar = Matrix::new(2,2);
-
-    let one_by_sqrt_2 = Complex{
-        re: T::one() / T::sqrt_2(),
-        im: T::default(),
-    };
-
-    hadamar.set(0,0,one_by_sqrt_2);
-    hadamar.set(0,1,one_by_sqrt_2);
-    hadamar.set(1,0,one_by_sqrt_2);
-    hadamar.set(1,1,Complex::zero() - one_by_sqrt_2);
-
-    let m = Matrix::mul(&hadamar, &q.as_matrix());
+    let matrix_hadamar = matrix_hadamar();
+    let m = Matrix::mul(&matrix_hadamar, &q.as_matrix());
     Qubit::from_matrix(m)
 
 }
@@ -130,3 +119,24 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
     Qubit::from_matrix(m)
 
 }
+
+// Матрица оператора Адамара
+pub fn matrix_hadamar<T>() -> Matrix<Complex<T>>
+where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>+Floating<T>{
+
+    let mut matrix_hadamar = Matrix::new(2,2);
+
+    let one_by_sqrt_2 = Complex{
+        re: T::one() / T::sqrt_2(),
+        im: T::default(),
+    };
+
+    matrix_hadamar.set(0,0,one_by_sqrt_2);
+    matrix_hadamar.set(0,1,one_by_sqrt_2);
+    matrix_hadamar.set(1,0,one_by_sqrt_2);
+    matrix_hadamar.set(1,1,Complex::zero() - one_by_sqrt_2);
+
+    matrix_hadamar
+
+}
+
