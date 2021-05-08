@@ -52,6 +52,22 @@ impl<T> Qubit<T>{
             beta,
         }
     }
+    // Состояние |0>
+    pub fn zero() -> Qubit<T>
+    where T: One<T> + Default{
+        Qubit{
+            alfa: Complex::one(),
+            beta: Complex::zero()
+        }
+    }
+    // Состояние |1>
+    pub fn one() -> Qubit<T>
+    where T: One<T> + Default{
+        Qubit{
+            alfa: Complex::zero(),
+            beta: Complex::one()
+        }
+    }
     // нормализация, то есть приведение к вектору единичной длины
     pub fn normalize(&mut self)
     where T: Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Default + Copy + Floating<T>{
@@ -117,6 +133,8 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 }
 
 // Гейт X (оператор квантового NOT)
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub fn X<T>(q: Qubit<T>) -> Qubit<T>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>{
 
@@ -126,7 +144,7 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 
 }
 
-// Матрица оператора Адамара
+// Матрица оператора Адамара H
 pub fn matrix_hadamar<T>() -> Matrix<Complex<T>>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>+Floating<T>{
 
@@ -146,7 +164,23 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 
 }
 
+// Матрица n-мерного оператора Адамара Hn
+pub fn matrix_hadamar_n<T>(n: u8) -> Matrix<Complex<T>>
+where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T>+Floating<T>{
+
+    let mut matrix = matrix_hadamar();
+    for _i in 1..n {
+        matrix = Matrix::kroneker_product(
+            &matrix,
+            &matrix_hadamar()
+        );
+    };
+    matrix
+}
+
+
 // Матрица гейта X (квантовый NOT)
+#[allow(non_snake_case)]
 pub fn matrix_X<T>() -> Matrix<Complex<T>>
 where T: Default + Copy + One<T>{
 
@@ -165,6 +199,7 @@ where T: Default + Copy + One<T>{
 }
 
 // Матрица гейта CNOT
+#[allow(non_snake_case)]
 pub fn matrix_CNOT<T>() -> Matrix<Complex<T>>
 where T: Default + Copy + One<T>+Floating<T>{
 
@@ -211,4 +246,73 @@ where T: Default + Copy + One<T>{
     ed_matrix
 
 }
+
+#[derive(Debug,Copy,Clone,PartialEq)]
+pub enum ZeroOne{
+    Zero,
+    One,
+}
+
+// особый тип матрицы, состоящий только из нулей и единиц
+pub type MatrixZeroOne = Matrix<ZeroOne>;
+
+pub trait MatrixZeroOneAdditions<T>
+where T: Add<Output=T> + Mul<Output=T> + Default + Copy + Clone{
+    fn new_zo(nrow: usize, ncol: usize) -> MatrixZeroOne;
+    fn mul_zo(m1: &Matrix<T>, m2: &MatrixZeroOne) -> Matrix<T>;
+    fn kroneker_product_zo(m1: &Matrix<T>, m2: &MatrixZeroOne) -> Matrix<T>;
+}
+
+impl<T> MatrixZeroOneAdditions<T> for MatrixZeroOne
+where T: Add<Output=T> + Mul<Output=T> + Default + Copy + Clone{
+
+    fn new_zo(nrow: usize, ncol: usize) -> MatrixZeroOne{
+        Matrix {
+            m: vec![ZeroOne::Zero; ncol*nrow],
+            nrow,
+            ncol,
+        }
+    }
+
+    /// Умножение
+    fn mul_zo(m1: &Matrix<T>, m2: &MatrixZeroOne) -> Matrix<T>{
+    //where T: Add<Output=T> + Default + Copy + Clone{
+        assert_eq!(m1.ncol, m2.nrow);
+        let mut result = Matrix::new(m1.nrow, m2.ncol);
+        for i in 0..m1.nrow {
+            for j in 0..m2.ncol {
+                let mut cij = T::default();
+                for r in 0..m1.ncol {
+                    if m2.get(r,j) == ZeroOne::One{
+                        cij = cij + m1.get(i,r);
+                    }
+                }
+                result.set(i,j,
+                    cij);
+            }
+        }
+        result
+    }
+
+    /// Произведение Кронекера (тензорное умножение)
+    fn kroneker_product_zo(m1: &Matrix<T>, m2: &MatrixZeroOne) -> Matrix<T>{
+    //where T: Add<Output=T> + Mul<Output=T> + Default + Copy + Clone{
+        let mut result = Matrix::new(m1.nrow*m2.nrow, m1.ncol*m2.ncol);
+        for i1 in 0..m1.nrow{
+            for j1 in 0..m1.ncol{
+                for i2 in 0..m2.nrow{
+                    for j2 in 0..m2.ncol{
+                        if m2.get(i2, j2) == ZeroOne::One{
+                            let row = i1 * m2.nrow + i2;
+                            let col = j1 * m2.ncol + j2;
+                            result.set(row, col, m1.get(i1, j1));
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+}
+
 

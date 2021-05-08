@@ -38,7 +38,7 @@ impl<T> Complex<T>{
             im,
         }
     }
-    // квадрат модуля комплексного числа
+    /// квадрат модуля комплексного числа
     pub fn sqrm(self) -> T
     where T: Add<Output=T> + Mul<Output=T> + Copy{
         self.re*self.re + self.im*self.im

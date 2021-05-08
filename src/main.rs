@@ -125,16 +125,16 @@ fn exercise_2_11(){
 }
 
 // Задача Дойча
-// Задача Дойча — Йожи заключается в определении, является ли функция нескольких двоичных переменных
-// f ( x 1 , x 2 , … , x n ) постоянной (принимает либо значение 0, либо 1 при любых аргументах)
+// Задача Дойча заключается в определении, является ли функция f (x) постоянной
+// (принимает либо значение 0, либо 1 при любых аргументах)
 // или сбалансированной (для половины области определения принимает значение 0, для другой половины 1)
 fn algorithm_deutsch(){
 
     println!("");
     println!("Задача Дойча");
 
-    let qx = Qubit::<f64>::new(Complex::one(), Complex::zero());
-    let qy = Qubit::<f64>::new(Complex::zero(), Complex::one());
+    let qx = Qubit::<f64>::zero();
+    let qy = Qubit::<f64>::one();
 
     let state = Matrix::kroneker_product(
         &qx.as_matrix(),
@@ -147,11 +147,7 @@ fn algorithm_deutsch(){
         println!("вариант Оракула: {}", variant);
 
         //к обоим кубитам применяем оператор Адамара
-        let operator = Matrix::kroneker_product(
-            &qubit::matrix_hadamar(),
-            &qubit::matrix_hadamar()
-        );
-
+        let operator = qubit::matrix_hadamar_n(2);
         let state_2 = Matrix::mul(&operator, &state);
 
         // к обоим кубитам применяем неизвестный оператор
@@ -166,11 +162,7 @@ fn algorithm_deutsch(){
         let state_4 = Matrix::mul(&operator_hadamar_ed, &state_3);
 
         // измерение кубита x:
-
-        // вероятность того, что оракул - константа
         let probability_const = state_4.get(0,0).sqrm() + state_4.get(1,0).sqrm();
-
-        // вероятность того, что оракул - сбалансирован
         let probability_balans = state_4.get(2,0).sqrm() + state_4.get(3,0).sqrm();
 
         if probability_const>probability_balans{
@@ -210,8 +202,56 @@ fn unknown_operator(variant: u8) -> Matrix<Complex<f64>>{
                     &qubit::ed_matrix()
                 )
             ),
-        _=> panic!("")
+        _=> unreachable!()
     }
+}
+
+// Алгоритм Бернштейна - Вазирани.
+// квантовый алгоритм, решающий задачу нахождения n-битного числа, скрытого в черном ящике
+fn algoritm_bernstein(){
+
+    println!("");
+    println!("Алгоритм Бернштейна - Вазирани");
+
+    // количество бит в числе
+    let digits = 3;
+
+    // генерируем матрицу начального состояния: [0 0 0 0 .... 0 1],
+    // где 0 - на месте разрядов определяемого числа, а 1 - в последнем столбце
+
+    let qubit_zero = Qubit::<f64>::zero();
+    let qubit_one = Qubit::<f64>::one();
+
+    let mut startstate = qubit_zero.as_matrix();
+    for _i in 1..digits{
+        startstate = Matrix::kroneker_product(
+            &startstate,
+            &qubit_zero.as_matrix()
+        );
+    }
+    startstate = Matrix::kroneker_product(
+        &startstate,
+        &qubit_one.as_matrix()
+    );
+
+    println!("Начальное состояние:");
+    println!("{}", startstate);
+
+    // в результате получается столбец из 2**(digits+1) строк, в котором 2 строка = 1, а остальные = 0
+    // поэтому при желании можно эту часть легко оптимизивать, не вычисляя матрицу начального состояния, а генерируя ее.
+
+    let hadamar_n = qubit::matrix_hadamar_n(digits + 1);
+
+    println!("Матрица оператора Адамара Hn:");
+    println!("{}", hadamar_n);
+
+    let state_2 = Matrix::mul(&hadamar_n, &startstate);
+
+    println!("Состояние после воздействия оператора Адамара:");
+    println!("{}", state_2);
+
+    // не доделано
+
 }
 
 fn main() {
@@ -222,5 +262,7 @@ fn main() {
     exercise_2_11();
 
     algorithm_deutsch();
+
+    algoritm_bernstein();
 
 }
