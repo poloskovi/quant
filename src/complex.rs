@@ -1,6 +1,6 @@
 //! Библиотека работы с комплексными числами
 
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Mul, Sub, Div, Neg};
 use std::fmt;
 use std::fmt::Display;
 //use num_traits::identities::One;
@@ -24,6 +24,15 @@ impl One<i32> for i32{
         1
     }
 }
+impl<T> One<Complex<T>> for Complex<T>
+where T: One<T> + Default{
+    fn one()->Complex<T>{
+        Complex{
+            re: T::one(),
+            im: T::default(),
+        }
+    }
+}
 
 #[derive(Debug,Copy,Clone)]
 pub struct Complex<T>{
@@ -42,13 +51,6 @@ impl<T> Complex<T>{
     pub fn sqrm(self) -> T
     where T: Add<Output=T> + Mul<Output=T> + Copy{
         self.re*self.re + self.im*self.im
-    }
-    pub fn one() -> Self
-    where T: One<T> + Default{
-        Self{
-            re: T::one(),
-            im: T::default(),
-        }
     }
     pub fn zero() -> Self
     where T: Default{
@@ -105,6 +107,17 @@ impl<T> Div for Complex<T>
         Self{
             re: z.re / y,
             im: z.im / y,
+        }
+    }
+}
+
+impl<T> Neg for Complex<T>
+    where T: Neg<Output=T> + Copy{
+    type Output = Self;
+    fn neg(self) -> Self{
+        Self{
+            re: -self.re,
+            im: -self.im
         }
     }
 }

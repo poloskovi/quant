@@ -3,12 +3,15 @@
 mod complex;
 use complex::Complex;
 mod qubit;
-use qubit::Qubit;
+use qubit::{Qubit, MatrixZeroOne};
+
+type Tfloat = f64;
+type Tcomplex = Complex<Tfloat>;
 
 extern crate matrix;
 use matrix::Matrix;
 
-fn print_correct(qb: Qubit<f64>){
+fn print_correct(qb: Qubit<Tfloat>){
     if qb.is_correct(){
         println!("Это корректный кубит {}", qb);
     }else{
@@ -87,8 +90,8 @@ fn exercise_2_11(){
     println!("Упражнение 2.11");
 
     let sqrt3 = 3_f64.sqrt();
-    let c1:Complex<f64> = Complex::new(1.0/4.0, sqrt3/4.0);
-    let c2:Complex<f64> = Complex::new(1.0/4.0, -sqrt3/4.0);
+    let c1:Tcomplex = Complex::new(1.0/4.0, sqrt3/4.0);
+    let c2:Tcomplex = Complex::new(1.0/4.0, -sqrt3/4.0);
 
     let mut state = Matrix::new(4,1);
     state.set(0,0,c1);
@@ -100,14 +103,14 @@ fn exercise_2_11(){
     println!("{}", state);
 
     //к первому кубиту применяем оператор Адамара, ко второму - единичный оператор
-    let operator = Matrix::kroneker_product(
-        &qubit::matrix_hadamar(),
-        &qubit::ed_matrix()
+    let operator = MatrixZeroOne::kroneker_product_zo(
+        &qubit::matrix_hadamar::<Tcomplex>(),
+        &qubit::ed_matrix::<Tcomplex>()
     );
     println!("Оператор H⊗I:");
     println!("{}",operator);
 
-    let state_2 = Matrix::mul(&operator, &state);
+    let state_2 = MatrixZeroOne::mul(&operator, &state);
     println!("Cостояние системы после воздействия оператором H⊗I:");
     println!("{}", state_2);
 
@@ -133,8 +136,8 @@ fn algorithm_deutsch(){
     println!("");
     println!("Задача Дойча");
 
-    let qx = Qubit::<f64>::zero();
-    let qy = Qubit::<f64>::one();
+    let qx = Qubit::<Tfloat>::zero();
+    let qy = Qubit::<Tfloat>::one();
 
     let state = Matrix::kroneker_product(
         &qx.as_matrix(),
@@ -148,18 +151,18 @@ fn algorithm_deutsch(){
 
         //к обоим кубитам применяем оператор Адамара
         let operator = qubit::matrix_hadamar_n(2);
-        let state_2 = Matrix::mul(&operator, &state);
+        let state_2 = MatrixZeroOne::mul(&operator, &state); // Matrix
 
         // к обоим кубитам применяем неизвестный оператор
-        let unknown_operator = unknown_operator(variant);
-        let state_3 = Matrix::mul(&unknown_operator, &state_2);
+        let unknown_operator = unknown_operator(variant); // MatrixZeroOne
+        let state_3 = Matrix::mul(&unknown_operator, &state_2); // Matrix
 
         // к кубиту x применяем оператор Адамара
-        let operator_hadamar_ed = Matrix::kroneker_product(
-            &qubit::matrix_hadamar(),
+        let operator_hadamar_ed = MatrixZeroOne::kroneker_product_zo(
+            &qubit::matrix_hadamar::<Tcomplex>(),
             &qubit::ed_matrix()
         );
-        let state_4 = Matrix::mul(&operator_hadamar_ed, &state_3);
+        let state_4 = MatrixZeroOne::mul(&operator_hadamar_ed, &state_3);
 
         // измерение кубита x:
         let probability_const = state_4.get(0,0).sqrm() + state_4.get(1,0).sqrm();
@@ -174,33 +177,36 @@ fn algorithm_deutsch(){
 
 }
 
-fn unknown_operator(variant: u8) -> Matrix<Complex<f64>>{
+// поменять результат на Matrix, так как в последнем варианте при перемножении матриц
+// законно могут появиться "2" в результате.
+// Сделать функцию пребразования MatrixZeroOne в Matrix.
+fn unknown_operator(variant: u8) -> Matrix<Tcomplex>{
     match variant{
         // константа f(x) = 0
-        0 => Matrix::kroneker_product(
+        0 => MatrixZeroOne::kroneker_product_zo(
                 &qubit::ed_matrix(),
                 &qubit::ed_matrix()
-            ),
+            ).to_matrix(),
         // константа f(x) = 1
-        1 => Matrix::kroneker_product(
+        1 => MatrixZeroOne::kroneker_product_zo(
                 &qubit::ed_matrix(),
                 &qubit::matrix_X()
-            ),
+            ).to_matrix(),
         // сбалансирована f(x) = x
-        2 => qubit::matrix_CNOT(),
+        2 => qubit::matrix_CNOT().to_matrix(),
         // сбалансирована f(x) = -x
         3 => Matrix::mul(
-                &Matrix::mul(
-                    &Matrix::kroneker_product(
+                &MatrixZeroOne::mul(
+                    &MatrixZeroOne::kroneker_product_zo(
                         &qubit::matrix_X(),
                         &qubit::ed_matrix()
                     ),
-                    &qubit::matrix_CNOT()
+                    &qubit::matrix_CNOT().to_matrix()
                 ),
-                &Matrix::kroneker_product(
+                &MatrixZeroOne::kroneker_product_zo(
                     &qubit::matrix_X(),
                     &qubit::ed_matrix()
-                )
+                ).to_matrix()
             ),
         _=> unreachable!()
     }
@@ -219,8 +225,8 @@ fn algoritm_bernstein(){
     // генерируем матрицу начального состояния: [0 0 0 0 .... 0 1],
     // где 0 - на месте разрядов определяемого числа, а 1 - в последнем столбце
 
-    let qubit_zero = Qubit::<f64>::zero();
-    let qubit_one = Qubit::<f64>::one();
+    let qubit_zero = Qubit::<Tfloat>::zero();
+    let qubit_one = Qubit::<Tfloat>::one();
 
     let mut startstate = qubit_zero.as_matrix();
     for _i in 1..digits{
@@ -245,7 +251,7 @@ fn algoritm_bernstein(){
     println!("Матрица оператора Адамара Hn:");
     println!("{}", hadamar_n);
 
-    let state_2 = Matrix::mul(&hadamar_n, &startstate);
+    let state_2 = MatrixZeroOne::mul(&hadamar_n, &startstate);
 
     println!("Состояние после воздействия оператора Адамара:");
     println!("{}", state_2);
