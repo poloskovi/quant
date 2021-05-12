@@ -9,9 +9,9 @@ use std::fmt::Display;
 // Типы с плавающей точкой, на которых построены вычисления кубита.
 // Определяем для этих типов константы и функции, испольуземые в унитарных операторах эволюции:
 pub trait Floating<T>{
-    // квадратный корень из 2
     //некое маленькое число, используется как граница погрешности в определении корректности кубита
     fn epsilon()->T;
+    // квадратный корень из 2
     fn sqrt(self)->T;
 }
 impl Floating<f64> for f64{
@@ -297,11 +297,22 @@ impl Neg for ZeroOne{
         }
     }
 }
+impl<T> Mul<T> for ZeroOne
+where T: Neg<Output=T> + Default{
+    type Output = T;
+    fn mul(self, other:T) -> T{
+        match self{
+            ZeroOne::Zero => T::default(),
+            ZeroOne::One => other,
+            ZeroOne::NegOne => -other,
+        }
+    }
+}
 impl fmt::Display for ZeroOne{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self{
-            ZeroOne::Zero => write!(f, "0"),
-            ZeroOne::One => write!(f, "1"),
+            ZeroOne::Zero => write!(f, " 0"),
+            ZeroOne::One => write!(f, " 1"),
             ZeroOne::NegOne => write!(f, "-1")
         }
     }
@@ -310,9 +321,10 @@ impl fmt::Display for ZeroOne{
 // матрица, состоящая из нулей и единиц, с сомножителем
 //#[derive(Debug)]
 pub struct MatrixZeroOne<C>{
-    pub matrix: Matrix<ZeroOne>,
     // множитель перед матрицей
     pub mult: C,
+    // сама матрица
+    pub matrix: Matrix<ZeroOne>,
 }
 
 impl<C> MatrixZeroOne<C>{
@@ -337,17 +349,12 @@ impl<C> MatrixZeroOne<C>{
             for j1 in 0..m1.ncol{
                 for i2 in 0..m2.nrow{
                     for j2 in 0..m2.ncol{
-                        let m1_ij = m1.get(i1, j1);
-                        let m2_ij = m2.get(i2, j2);
-                        if m2_ij == ZeroOne::One{
-                            let row = i1 * m2.nrow + i2;
-                            let col = j1 * m2.ncol + j2;
-                            result.set(row, col, m1_ij * m_zo.mult);
-                        }else if m2_ij == ZeroOne::NegOne{
-                            let row = i1 * m2.nrow + i2;
-                            let col = j1 * m2.ncol + j2;
-                            result.set(row, col, -m1_ij * m_zo.mult);
-                        }
+                        let m1_ij = m1.get(i1, j1);// значение ячейки m1
+                        let m2_ij = m2.get(i2, j2);// значение ячейки m2
+                        let row = i1 * m2.nrow + i2;// строка матрици результата
+                        let col = j1 * m2.ncol + j2;// колонка матрицы результата
+                        result.set(row,col,
+                            m2_ij*m1_ij*m_zo.mult);
                     }
                 }
             }
@@ -373,17 +380,12 @@ impl<C> MatrixZeroOne<C>{
             for j1 in 0..m1.ncol{
                 for i2 in 0..m2.nrow{
                     for j2 in 0..m2.ncol{
-                        let m1_ij = m1.get(i1, j1);
-                        let m2_ij = m2.get(i2, j2);
-                        if m2_ij == ZeroOne::One{
-                            let row = i1 * m2.nrow + i2;
-                            let col = j1 * m2.ncol + j2;
-                            result.matrix.set(row, col, m1_ij);
-                        }else if m2_ij == ZeroOne::NegOne{
-                            let row = i1 * m2.nrow + i2;
-                            let col = j1 * m2.ncol + j2;
-                            result.matrix.set(row, col, -m1_ij);
-                        }
+                        let m1_ij = m1.get(i1, j1);// значение ячейки m1
+                        let m2_ij = m2.get(i2, j2);// значение ячейки m2
+                        let row = i1 * m2.nrow + i2;// строка матрици результата
+                        let col = j1 * m2.ncol + j2;// колонка матрицы результата
+                        result.matrix.set(row,col,
+                            m2_ij * m1_ij);
                     }
                 }
             }
