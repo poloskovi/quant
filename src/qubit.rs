@@ -141,16 +141,16 @@ where T: Default + PartialEq + PartialOrd + Display + Sub<Output=T> + Copy + One
 // ОПЕРАТОРЫ ЭВОЛЮЦИИ
 
 // Оператор Адамара H
-pub fn hadamar<T>(q: Qubit<T>) -> Qubit<T>
+pub fn hadamard<T>(q: Qubit<T>) -> Qubit<T>
 where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T> + Copy + One<T> + Sqrt_2<T>{
 
-    let matrix_hadamar = matrix_hadamar();
-    let m = MatrixZeroOne::mul(&matrix_hadamar, &q.as_matrix());
+    let matrix_hadamard = matrix_hadamard();
+    let m = MatrixZeroOne::mul(&matrix_hadamard, &q.as_matrix());
     Qubit::from_matrix(m)
 
 }
 
-// Гейт X (оператор квантового NOT)
+// Гейт X (оператор квантового "NOT")
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 pub fn X<T>(q: Qubit<T>) -> Qubit<T>
@@ -163,7 +163,7 @@ where T: Default + Sub<Output=T> + Add<Output=T> + Mul<Output=T> + Div<Output=T>
 }
 
 // Матрица оператора Адамара H
-pub fn matrix_hadamar<C>() -> MatrixZeroOne<C>
+pub fn matrix_hadamard<C>() -> MatrixZeroOne<C>
 where C: Div<Output=C> + One<C> + Sqrt_2<C>{
 
     let mut matrix = Matrix::new(2,2);
@@ -178,20 +178,20 @@ where C: Div<Output=C> + One<C> + Sqrt_2<C>{
 
     MatrixZeroOne{
         matrix: matrix,
-        mult: C::one() / C::sqrt_2(),
+        multiplier: C::one() / C::sqrt_2(),
     }
 
 }
 
 // Матрица n-мерного оператора Адамара Hn
-pub fn matrix_hadamar_n<C>(n: u8) -> MatrixZeroOne<C>
+pub fn matrix_hadamard_n<C>(n: u8) -> MatrixZeroOne<C>
 where C: Mul<Output=C> + Div<Output=C> + Neg<Output=C> + One<C> + Sqrt_2<C> + Copy{
 
-    let mut zo_matrix = matrix_hadamar();
+    let mut zo_matrix = matrix_hadamard();
     for _i in 1..n {
         zo_matrix = MatrixZeroOne::kroneker_product_zo(
             &zo_matrix,
-            &matrix_hadamar()
+            &matrix_hadamard()
         );
     };
 
@@ -216,46 +216,57 @@ where C: One<C>{
 
     MatrixZeroOne{
         matrix: matrix,
-        mult: C::one(),
+        multiplier: C::one(),
     }
 
 }
 
 // Матрица гейта CNOT
 #[allow(non_snake_case)]
-pub fn matrix_CNOT<T>() -> MatrixZeroOne<T>
-where T: One<T>{
+pub fn matrix_CNOT<C>() -> MatrixZeroOne<C>
+where C: One<C>{
+    matrix_CNOT_n(2, 1, 0)
+}
 
-    let mut matrix = Matrix::new(4,4);
+// Матрица гейта CNOT для системы n кубитов
+// control - номер контролирующего кубита
+// target - номер контролируемого кубита
+#[allow(non_snake_case)]
+pub fn matrix_CNOT_n<C>(n:u32, control:u32, target: u32) -> MatrixZeroOne<C>
+where C: One<C>{
 
-    let zero = ZeroOne::Zero;
-    let one = ZeroOne::One;
+    assert!(n >= 2);
+    assert!(n > control);
+    assert!(n > target);
+    assert!(control != target);
 
-    matrix.set(0,0,one);
-    matrix.set(0,1,zero);
-    matrix.set(0,2,zero);
-    matrix.set(0,3,zero);
+    let size = 2_u32.pow(n) as usize;
+    let mut matrix = Matrix::new(size, size);
 
-    matrix.set(1,0,zero);
-    matrix.set(1,1,one);
-    matrix.set(1,2,zero);
-    matrix.set(1,3,zero);
+    let p_control = 2_u32.pow(control) as usize;
+    let p_target = 2_u32.pow(target) as usize;
 
-    matrix.set(2,0,zero);
-    matrix.set(2,1,zero);
-    matrix.set(2,2,zero);
-    matrix.set(2,3,one);
-
-    matrix.set(3,0,zero);
-    matrix.set(3,1,zero);
-    matrix.set(3,2,one);
-    matrix.set(3,3,zero);
+    for column in 0..size{
+        let mut row = column;
+        let is_control_1 = (column & p_control) != 0;
+        if is_control_1{
+            // контролирующий кубит = 1
+            let is_target_1 = (column & p_target) != 0;
+            if is_target_1{
+                // контролируемый кубит = 1
+                row = column - p_target; // строго не доказал
+            }else{
+                // контролируемый кубит = 0
+                row = column + p_target;
+            }
+        }
+        matrix.set(row, column, ZeroOne::One);
+    }
 
     MatrixZeroOne{
         matrix: matrix,
-        mult: T::one(),
+        multiplier: C::one(),
     }
-
 }
 
 // Единичная матрица 2х2
@@ -271,7 +282,7 @@ where C: One<C>{
 
     MatrixZeroOne{
         matrix: matrix,
-        mult: C::one(),
+        multiplier: C::one(),
     }
 
 }
@@ -322,17 +333,17 @@ impl fmt::Display for ZeroOne{
 //#[derive(Debug)]
 pub struct MatrixZeroOne<C>{
     // множитель перед матрицей
-    pub mult: C,
+    pub multiplier: C,
     // сама матрица
     pub matrix: Matrix<ZeroOne>,
 }
 
 impl<C> MatrixZeroOne<C>{
 
-    pub fn new(nrow: usize, ncol: usize, mult: C) -> MatrixZeroOne<C>{
+    pub fn new(nrow: usize, ncol: usize, multiplier: C) -> MatrixZeroOne<C>{
         MatrixZeroOne{
             matrix: Matrix::new(nrow, ncol),
-            mult: mult
+            multiplier: multiplier
         }
     }
 
@@ -354,7 +365,7 @@ impl<C> MatrixZeroOne<C>{
                         let row = i1 * m2.nrow + i2;// строка матрици результата
                         let col = j1 * m2.ncol + j2;// колонка матрицы результата
                         result.set(row,col,
-                            m2_ij*m1_ij*m_zo.mult);
+                            m2_ij * m1_ij * m_zo.multiplier);
                     }
                 }
             }
@@ -373,7 +384,7 @@ impl<C> MatrixZeroOne<C>{
         let mut result = MatrixZeroOne::new(
             m1.nrow*m2.nrow,
             m1.ncol*m2.ncol,
-            m_zo1.mult * m_zo2.mult
+            m_zo1.multiplier * m_zo2.multiplier
         );
 
         for i1 in 0..m1.nrow{
@@ -414,7 +425,7 @@ impl<C> MatrixZeroOne<C>{
                     }
                 };
                 result.set(i,j,
-                    cij * m_zo.mult);
+                    cij * m_zo.multiplier);
             }
         }
         result
@@ -427,11 +438,7 @@ impl<C> MatrixZeroOne<C>{
         for i in 0..m1.nrow {
             for j in 0..m1.ncol {
                 let m1_ij = m1.get(i,j);
-                if m1_ij == ZeroOne::One{
-                    result.set(i, j, self.mult);
-                }else if m1_ij == ZeroOne::NegOne{
-                    result.set(i, j, -self.mult);
-                }
+                result.set(i, j, m1_ij * self.multiplier);
             }
         }
         result
@@ -441,7 +448,7 @@ impl<C> MatrixZeroOne<C>{
 impl<C> fmt::Display for MatrixZeroOne<C>
     where C :Display + Copy{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{:.5} * ", self.mult)?;
+        writeln!(f, "{:.5} * ", self.multiplier)?;
         write!(f, "{}", self.matrix)
     }
 }

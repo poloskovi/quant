@@ -52,7 +52,7 @@ fn exercise_2_7(){
 
     let q1 = Qubit::new(c1, c2);
     print_correct(q1);
-    let qh1 = qubit::hadamar(q1);
+    let qh1 = qubit::hadamard(q1);
     println!("после применения оператора Адамара: {}", qh1);
     println!("вероятность нахождения в состоянии '+': {:.4}", qh1.probability(0));
 
@@ -75,7 +75,7 @@ fn exercise_2_10(){
     let c2:Complex<f64> = Complex::new(-1.0/sqrt2, 0.0);
     let q1 = Qubit::new(c1, c2);
     print_correct(q1);
-    let qh1 = qubit::hadamar(q1);
+    let qh1 = qubit::hadamard(q1);
     println!("после применения оператора Адамара: {}", qh1);
     println!("вероятность нахождения в состоянии '+': {:.4}", qh1.probability(0));
 
@@ -104,7 +104,7 @@ fn exercise_2_11(){
 
     //к первому кубиту применяем оператор Адамара, ко второму - единичный оператор
     let operator = MatrixZeroOne::kroneker_product_zo(
-        &qubit::matrix_hadamar::<Tcomplex>(),
+        &qubit::matrix_hadamard::<Tcomplex>(),
         &qubit::ed_matrix::<Tcomplex>()
     );
     println!("Оператор H⊗I:");
@@ -150,7 +150,7 @@ fn algorithm_deutsch(){
         println!("вариант Оракула: {}", variant);
 
         //к обоим кубитам применяем оператор Адамара
-        let operator = qubit::matrix_hadamar_n(2);
+        let operator = qubit::matrix_hadamard_n(2);
         let state_2 = MatrixZeroOne::mul(&operator, &state); // Matrix
 
         // к обоим кубитам применяем неизвестный оператор
@@ -158,11 +158,11 @@ fn algorithm_deutsch(){
         let state_3 = Matrix::mul(&unknown_operator, &state_2); // Matrix
 
         // к кубиту x применяем оператор Адамара
-        let operator_hadamar_ed = MatrixZeroOne::kroneker_product_zo(
-            &qubit::matrix_hadamar::<Tcomplex>(),
+        let operator_hadamard_ed = MatrixZeroOne::kroneker_product_zo(
+            &qubit::matrix_hadamard::<Tcomplex>(),
             &qubit::ed_matrix()
         );
-        let state_4 = MatrixZeroOne::mul(&operator_hadamar_ed, &state_3);
+        let state_4 = MatrixZeroOne::mul(&operator_hadamard_ed, &state_3);
 
         // измерение кубита x:
         let probability_const = state_4.get(0,0).sqrm() + state_4.get(1,0).sqrm();
@@ -246,17 +246,39 @@ fn algoritm_bernstein(){
     // в результате получается столбец из 2**(digits+1) строк, в котором 2 строка = 1, а остальные = 0
     // поэтому при желании можно эту часть легко оптимизивать, не вычисляя матрицу начального состояния, а генерируя ее.
 
-    let hadamar_n = qubit::matrix_hadamar_n(digits + 1);
+    let hadamard_n = qubit::matrix_hadamard_n(digits + 1);
 
     println!("Матрица оператора Адамара Hn:");
-    println!("{}", hadamar_n);
+    println!("{}", hadamard_n);
 
-    let state_2 = MatrixZeroOne::mul(&hadamar_n, &startstate);
+    let state_2 = MatrixZeroOne::mul(&hadamard_n, &startstate);
 
     println!("Состояние после воздействия оператора Адамара:");
     println!("{}", state_2);
 
     // не доделано
+
+}
+
+fn test_cnot_n(){
+
+    // проверка работы оператора CNOT для n кубитов
+
+    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(2,1,0);
+    println!("{}", operator);
+
+    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT();
+    println!("{}", operator);
+    println!("I x CNOT = {}", MatrixZeroOne::kroneker_product_zo(&qubit::ed_matrix(), &operator));
+
+    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,1,0);
+    println!("1 - 0 (I x CNOT): {}", operator);
+
+    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,2,0);
+    println!("2 - 0: {}", operator);
+
+    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,2,1);
+    println!("2 - 1 (CNOT x I): {}", operator);
 
 }
 
@@ -270,5 +292,7 @@ fn main() {
     algorithm_deutsch();
 
     algoritm_bernstein();
+
+    test_cnot_n();
 
 }
