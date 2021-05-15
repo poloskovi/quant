@@ -1,7 +1,7 @@
 // Решение упражнений из книги С.С.Сысоев "Введение в квантовые вычисления. Квантовые алгоритмы"
 
 mod complex;
-use complex::Complex;
+use complex::{Complex,One};
 mod qubit;
 use qubit::{Qubit, MatrixZeroOne};
 
@@ -154,7 +154,7 @@ fn algorithm_deutsch(){
         let state_2 = MatrixZeroOne::mul(&operator, &state); // Matrix
 
         // к обоим кубитам применяем неизвестный оператор
-        let unknown_operator = unknown_operator(variant); // MatrixZeroOne
+        let unknown_operator = unknown_operator_deutsch(variant); // MatrixZeroOne
         let state_3 = Matrix::mul(&unknown_operator, &state_2); // Matrix
 
         // к кубиту x применяем оператор Адамара
@@ -180,7 +180,7 @@ fn algorithm_deutsch(){
 // поменять результат на Matrix, так как в последнем варианте при перемножении матриц
 // законно могут появиться "2" в результате.
 // Сделать функцию пребразования MatrixZeroOne в Matrix.
-fn unknown_operator(variant: u8) -> Matrix<Tcomplex>{
+fn unknown_operator_deutsch(variant: u8) -> Matrix<Tcomplex>{
     match variant{
         // константа f(x) = 0
         0 => MatrixZeroOne::kroneker_product_zo(
@@ -220,44 +220,113 @@ fn algoritm_bernstein(){
     println!("Алгоритм Бернштейна - Вазирани");
 
     // количество бит в числе
-    let digits = 3;
+    let digits :u8 = 7;
+    let unknown_number = unknown_number();
 
     // генерируем матрицу начального состояния: [0 0 0 0 .... 0 1],
-    // где 0 - на месте разрядов определяемого числа, а 1 - в последнем столбце
-
-    let qubit_zero = Qubit::<Tfloat>::zero();
-    let qubit_one = Qubit::<Tfloat>::one();
-
-    let mut startstate = qubit_zero.as_matrix();
-    for _i in 1..digits{
-        startstate = Matrix::kroneker_product(
-            &startstate,
-            &qubit_zero.as_matrix()
-        );
-    }
-    startstate = Matrix::kroneker_product(
-        &startstate,
-        &qubit_one.as_matrix()
-    );
-
-    println!("Начальное состояние:");
-    println!("{}", startstate);
+    // где 0 - на месте разрядов определяемого числа, а 1 - в последнем кубите
 
     // в результате получается столбец из 2**(digits+1) строк, в котором 2 строка = 1, а остальные = 0
     // поэтому при желании можно эту часть легко оптимизивать, не вычисляя матрицу начального состояния, а генерируя ее.
+//    let qubit_zero = Qubit::<Tfloat>::zero();
+//    let qubit_one = Qubit::<Tfloat>::one();
+
+//    let mut startstate = qubit_zero.as_matrix();
+//    for _i in 1..digits{
+//        startstate = Matrix::kroneker_product(
+//            &startstate,
+//            &qubit_zero.as_matrix()
+//        );
+//    }
+//    startstate = Matrix::kroneker_product(
+//        &startstate,
+//        &qubit_one.as_matrix()
+//    );
+
+    //оптимизировано: матрица начального состояния
+    let mut startstate = Matrix::<Tcomplex>::new(
+        2_u32.pow(digits as u32 + 1) as usize,
+        1
+    );
+    startstate.set(1,0,Complex::one());
+
+    println!("Это очень мощное колдунство. Поэтому могу считать долго...");
+
 
     let hadamard_n = qubit::matrix_hadamard_n(digits + 1);
 
-    println!("Матрица оператора Адамара Hn:");
-    println!("{}", hadamard_n);
-
     let state_2 = MatrixZeroOne::mul(&hadamard_n, &startstate);
 
-    println!("Состояние после воздействия оператора Адамара:");
-    println!("{}", state_2);
+    let unknown_operator = operator_bernstein(unknown_number, digits);
+    let state_3;
+    match unknown_operator{
+        None => state_3 = state_2,
+        Some(operator) => state_3 = Matrix::mul(&operator, &state_2),
+    }
 
-    // не доделано
+    let state_final = MatrixZeroOne::mul(&hadamard_n, &state_3);
 
+    let result = find_one_in_state(&state_final);
+    match result{
+        Some(x) => {
+
+            let mut y = x >> 1;// младший разряд - от контролирующего кубита, отбрасываем
+
+            // биты расположены в обратном порядке
+            // (так как клали мы их в орукул тоже в обратном порядке, от младших к старшим)
+            let mut z = 0;
+            for _ in 0..digits{
+                let ostatok = y % 2;
+                y = y >> 1;
+                z = z << 1;
+                z = z + ostatok;
+            }
+            println!("Загаданное число: {}", z);
+        },
+        None => println!("Какая-то ошибка"),
+    }
+
+}
+
+fn find_one_in_state(m: &Matrix<Tcomplex>) -> Option<usize>{
+    for i in 0..m.nrow{
+        if m.get(i,0).sqrm()>0.9{
+            return Some(i)
+        }
+    }
+    None
+}
+
+fn operator_bernstein(unknown_number: u8, digits: u8) -> Option<Matrix::<Tcomplex>>{
+
+    let mut operator = None;
+
+    let mut number = unknown_number;
+
+    let mut position = digits + 1;
+    while number != 0{
+
+        let ostatok = number % 2;
+        number = number >> 1;
+        position -= 1;
+
+        if ostatok == 1 {
+            let tek_operator = qubit::matrix_CNOT_n(
+                (digits+1).into(), position.into() ,0).to_matrix();
+            match operator{
+                None =>
+                    operator = Some(tek_operator),
+                Some(old_operator) =>
+                    operator = Some(Matrix::mul_threads(&old_operator, &tek_operator, 4)),
+            }
+        }
+    };
+
+    operator
+}
+
+fn unknown_number() ->u8{
+    120
 }
 
 fn test_cnot_n(){
@@ -293,6 +362,6 @@ fn main() {
 
     algoritm_bernstein();
 
-    test_cnot_n();
+    //test_cnot_n();
 
 }
