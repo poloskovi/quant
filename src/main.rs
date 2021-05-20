@@ -155,7 +155,7 @@ fn algorithm_deutsch(){
 
         // к обоим кубитам применяем неизвестный оператор
         let unknown_operator = unknown_operator_deutsch(variant); // MatrixZeroOne
-        let state_3 = Matrix::mul(&unknown_operator, &state_2); // Matrix
+        let state_3 = MatrixZeroOne::mul(&unknown_operator, &state_2); // Matrix
 
         // к кубиту x применяем оператор Адамара
         let operator_hadamard_ed = MatrixZeroOne::kroneker_product_zo(
@@ -177,36 +177,33 @@ fn algorithm_deutsch(){
 
 }
 
-// поменять результат на Matrix, так как в последнем варианте при перемножении матриц
-// законно могут появиться "2" в результате.
-// Сделать функцию пребразования MatrixZeroOne в Matrix.
-fn unknown_operator_deutsch(variant: u8) -> Matrix<Tcomplex>{
+fn unknown_operator_deutsch(variant: u8) -> MatrixZeroOne<Tcomplex>{
     match variant{
         // константа f(x) = 0
         0 => MatrixZeroOne::kroneker_product_zo(
                 &qubit::ed_matrix(),
                 &qubit::ed_matrix()
-            ).to_matrix(),
+            ),
         // константа f(x) = 1
         1 => MatrixZeroOne::kroneker_product_zo(
                 &qubit::ed_matrix(),
                 &qubit::matrix_X()
-            ).to_matrix(),
+            ),
         // сбалансирована f(x) = x
-        2 => qubit::matrix_CNOT().to_matrix(),
+        2 => qubit::matrix_CNOT(),
         // сбалансирована f(x) = -x
-        3 => Matrix::mul(
-                &MatrixZeroOne::mul(
+        3 => MatrixZeroOne::mul_zo(
+                &MatrixZeroOne::mul_zo(
                     &MatrixZeroOne::kroneker_product_zo(
                         &qubit::matrix_X(),
                         &qubit::ed_matrix()
                     ),
-                    &qubit::matrix_CNOT().to_matrix()
+                    &qubit::matrix_CNOT()
                 ),
                 &MatrixZeroOne::kroneker_product_zo(
                     &qubit::matrix_X(),
                     &qubit::ed_matrix()
-                ).to_matrix()
+                )
             ),
         _=> unreachable!()
     }
@@ -220,7 +217,7 @@ fn algoritm_bernstein(){
     println!("Алгоритм Бернштейна - Вазирани");
 
     // количество бит в числе
-    let digits :u8 = 7;
+    let digits :u8 = 8;
     let unknown_number = unknown_number();
 
     // генерируем матрицу начального состояния: [0 0 0 0 .... 0 1],
@@ -261,7 +258,8 @@ fn algoritm_bernstein(){
     let state_3;
     match unknown_operator{
         None => state_3 = state_2,
-        Some(operator) => state_3 = Matrix::mul(&operator, &state_2),
+        //Some(operator) => state_3 = Matrix::mul(&operator, &state_2),
+        Some(operator) => state_3 = MatrixZeroOne::mul(&operator, &state_2),
     }
 
     let state_final = MatrixZeroOne::mul(&hadamard_n, &state_3);
@@ -297,7 +295,7 @@ fn find_one_in_state(m: &Matrix<Tcomplex>) -> Option<usize>{
     None
 }
 
-fn operator_bernstein(unknown_number: u8, digits: u8) -> Option<Matrix::<Tcomplex>>{
+fn operator_bernstein(unknown_number: u8, digits: u8) -> Option<MatrixZeroOne::<Tcomplex>>{
 
     let mut operator = None;
 
@@ -312,12 +310,12 @@ fn operator_bernstein(unknown_number: u8, digits: u8) -> Option<Matrix::<Tcomple
 
         if ostatok == 1 {
             let tek_operator = qubit::matrix_CNOT_n(
-                (digits+1).into(), position.into() ,0).to_matrix();
+                (digits+1).into(), position.into() ,0);
             match operator{
                 None =>
                     operator = Some(tek_operator),
                 Some(old_operator) =>
-                    operator = Some(Matrix::mul_threads(&old_operator, &tek_operator, 4)),
+                    operator = Some(MatrixZeroOne::mul_zo(&old_operator, &tek_operator)),
             }
         }
     };
@@ -326,29 +324,7 @@ fn operator_bernstein(unknown_number: u8, digits: u8) -> Option<Matrix::<Tcomple
 }
 
 fn unknown_number() ->u8{
-    120
-}
-
-fn test_cnot_n(){
-
-    // проверка работы оператора CNOT для n кубитов
-
-    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(2,1,0);
-    println!("{}", operator);
-
-    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT();
-    println!("{}", operator);
-    println!("I x CNOT = {}", MatrixZeroOne::kroneker_product_zo(&qubit::ed_matrix(), &operator));
-
-    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,1,0);
-    println!("1 - 0 (I x CNOT): {}", operator);
-
-    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,2,0);
-    println!("2 - 0: {}", operator);
-
-    let operator: MatrixZeroOne::<Tcomplex> = qubit::matrix_CNOT_n(3,2,1);
-    println!("2 - 1 (CNOT x I): {}", operator);
-
+    163
 }
 
 fn main() {
